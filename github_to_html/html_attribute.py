@@ -170,12 +170,10 @@ class AttributePostprocessor(postprocessors.Postprocessor):
             element.attrib['bordercolor'] = '#888'
             element.attrib['style'] = 'border-collapse:collapse'
 
-    def _remove_md(self, url):
-        # サイト内絶対パスで末尾に .md があった場合、取り除く
-        # （github のプレビューとの互換性のため）
+    def _replace_md(self, url, suffix):
         matched = re.match('([^#]*)\.md(#.*)?$', url)
         if matched:
-            url = matched.group(1)
+            url = matched.group(1) + suffix
             anchor = matched.group(2)
             if anchor is not None:
                 url = url + anchor
@@ -215,7 +213,15 @@ class AttributePostprocessor(postprocessors.Postprocessor):
                         else:
                             paths.append(p)
                     absolute = base_url + '/' + '/'.join(paths)
-                element.attrib['href'] = self._remove_md(absolute)
+                # サイト内パスで末尾に .md があった場合、取り除く
+                # （github のプレビューとの互換性のため）
+                suffix = ''
+                if base_url.startswith('file://'):
+                    # ローカルでは map.md と map/map.md などファイル名と
+                    # ディレクトリ名が同名になる場合のために .html の付加が
+                    # 必要になる。
+                    suffix = '.html'
+                element.attrib['href'] = self._replace_md(absolute, suffix)
 
     def run(self, text):
         text = '<{tag}>{text}</{tag}>'.format(tag=self._markdown.doc_tag, text=text)
