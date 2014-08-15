@@ -183,39 +183,39 @@ class AttributePostprocessor(postprocessors.Postprocessor):
 
     def _to_absolute_url(self, element):
         if element.tag == 'a' and element.attrib.has_key('href'):
+            original = element.attrib['href']
             base_url = self.config['base_url'].strip('/')
-            base_paths = self.config['base_path'].strip('/').split('/')
-            full_path = self.config['full_path']
-
-            url = element.attrib['href']
-            if url.startswith('http://') or url.startswith('https://'):
+            if original.startswith('http://') or original.startswith('https://'):
                 # 絶対パス
                 base_url_body = base_url.split('//', 2)[1]
-                url_body = url.split('//', 2)[1]
+                url_body = original.split('//', 2)[1]
                 # 別ドメインの場合は別タブで開く
                 if not url_body.startswith(base_url_body):
                     element.attrib['target'] = '_blank'
-            elif url.startswith('/'):
-                # サイト内絶対パス
-                element.attrib['href'] = base_url + url
-                element.attrib['href'] = self._remove_md(element.attrib['href'])
-            elif url.startswith('#'):
-                # ページ内リンク
-                element.attrib['href'] = base_url + '/' + self._remove_md(full_path) + url
             else:
-                # サイト内相対パス
-                paths = []
-                for p in base_paths + url.split('/'):
-                    if p == '':
-                        continue
-                    elif p == '.':
-                        continue
-                    elif p == '..':
-                        paths = paths[:-1]
-                    else:
-                        paths.append(p)
-                element.attrib['href'] = base_url + '/' + '/'.join(paths)
-                element.attrib['href'] = self._remove_md(element.attrib['href'])
+                absolute = None
+                if original.startswith('/'):
+                    # サイト内絶対パス
+                    absolute = base_url + original
+                elif original.startswith('#'):
+                    # ページ内リンク
+                    full_path = self.config['full_path']
+                    absolute = base_url + '/' + full_path + original
+                else:
+                    # サイト内相対パス
+                    base_paths = self.config['base_path'].strip('/').split('/')
+                    paths = []
+                    for p in base_paths + original.split('/'):
+                        if p == '':
+                            continue
+                        elif p == '.':
+                            continue
+                        elif p == '..':
+                            paths = paths[:-1]
+                        else:
+                            paths.append(p)
+                    absolute = base_url + '/' + '/'.join(paths)
+                element.attrib['href'] = self._remove_md(absolute)
 
     def run(self, text):
         text = '<{tag}>{text}</{tag}>'.format(tag=self._markdown.doc_tag, text=text)
